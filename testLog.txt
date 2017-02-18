@@ -1,0 +1,96 @@
+Test suite - Test Case - Observed failure - Fix
+(^^^^) = see previus item
+(vvvv) = see next item
+
+Everything below this line is in cronilogical order
+~-~-~-~-~-~-~-~-~-~-~-~-~-~-~-~-~-~-~-~-~-~-~-~-~-~
+PointTester::testConstructorWithDoubles - p0(0,0,0) - invalid point - #1
+PointTester::testIsEquivalentTo - comparing p0 and p0 - should be equal - #2
+^^^^ - comparing p0 and p1 - should not be equal - ^^^^
+^^^^ - comparing p0 and p2 - ^^^^ - ^^^^
+^^^^ - comparing p0 and p3 - ^^^^ - ^^^^
+^^^^ - comparing p1 and p0 - ^^^^ - ^^^^
+^^^^ - comparing p1 and p2 - ^^^^ - ^^^^
+^^^^ - comparing p1 and p3 - ^^^^ - ^^^^
+^^^^ - comparing p2 and p0 - ^^^^ - ^^^^
+^^^^ - comparing p2 and p1 - ^^^^ - ^^^^
+^^^^ - comparing p3 and p0 - ^^^^ - ^^^^
+^^^^ - comparing p3 and p1 - ^^^^ - ^^^^
+^^^^ - comparing p1 and p1 - should be equal - #3
+^^^^ - comparing p2 and p2 - ^^^^ - ^^^^ 
+^^^^ - comparing p2 and p3 - ^^^^ - ^^^^
+^^^^ - comparing p3 and p2 - ^^^^ - ^^^^
+^^^^ - comparing p3 and p3 - ^^^^ - ^^^^
+EdgeTester::testEdge01 - e.getSlopeZ() - slope=inf (expecting 0) - #4
+EdgeTester::testEdge02 - ^^^^ - slope=inf (expecting 1.118033989) - ^^^^
+TriangleTester::testConstructorWithStrings - triangle points - unexpected type of N - #5
+^^^^ - ^^^^ - unexpected type of I - #6
+^^^^ - ^^^^ - unexpected area of nan - #7
+TriangleTester::testEquilateralTriangles - Triangle t1 - unexpectedly not a triangle - #8
+^^^^ - ^^^^ - unexpected type of I - #9
+^^^^ - ^^^^ - ^^^^ - #10
+^^^^ - ^^^^ - ^^^^ - #11
+<<A note on fix 9>>
+>>While the test case would not necisarily have pointed to it and the fix seems un necisary,<<
+>>I think it is a necisary fix to make the program work correctly. At the vary least, nothin<<
+>>seemed to break when I did it.<<
+<<End note>>
+N/A - N/A - N/A - #12
+<<A note on fix 12>>
+>>Test cases were writen to find this bug. But I looked at the code it would be running and<<
+>>found the bug on my own. I understand that that is not great debugging practice, but in<<
+>>my eyes, a bug found is a bug found and the means matter little<<
+<<End note>>
+
+
+~-~-~-~-~-~-~-~-~-~-~-~-~-~-~-~-~-~-~-~-~-~-~-~-~-~
+Everything above this line is in cronilogical order
+
+Fix List:
+#1: in Point.cpp, changed "m_z == INFINITY" to "m_z != INFINITY" in Point::cheackForInfinity
+#2: in Point.cpp, changed "edge.getLength() > m_minDistance" to "edge.getLength() <= m_minDistance" in Point::isEquivalentTo
+#3: in Edge.cpp, changed "m_point2->getY() - m_point1->getX()" to "m_point2->getY() - m_point1->getY()" in Edge::getLength
+#4: in Edge.cpp, changed "xyOffset != 0" to "xyOffset == 0" in Edge::getSlopeZ
+#5: in Triangle.cpp, changed "!isTriangle()" to "isTriangle()" in Triangle::getTriangleType
+#6: in Triangle.cpp, changed "approximatelyEquals(c, c, m_edgeLengthThreshold)" to "approximatelyEquals(a, c, m_edgeLengthThreshold)" in Triangle::getTriangleType
+#7: in Triangle.cpp, changed "double s = ( a + b + b)/2;" to "double s = ( a + b + c)/2;" in Triangle::computerArea
+#8: in Triangle.cpp, changed "!m_points[0]->isEquivalentTo(*(m_points[1])) && !m_points[1]->isEquivalentTo(*(m_points[2])) && !m_points[2]->isEquivalentTo(*(m_points[0]))"
+and "!m_edges[0]->isParallelTo(*(m_edges[1])) && !m_edges[1]->isParallelTo(*(m_edges[2])) && !m_edges[2]->isParallelTo(*(m_edges[0]))" to
+"!m_points[0]->isEquivalentTo(*(m_points[1])) || !m_points[1]->isEquivalentTo(*(m_points[2])) || !m_points[2]->isEquivalentTo(*(m_points[0]))" and 
+"!m_edges[0]->isParallelTo(*(m_edges[1])) || !m_edges[1]->isParallelTo(*(m_edges[2])) || !m_edges[2]->isParallelTo(*(m_edges[0]))" respectivly in Triangle::isTriangle
+(TL;DR: changed all "&&" to "||" for these lines, counted as one bug)
+#9: in Triangle.cpp, "if (approximatelyEquals(a, b, m_edgeLengthThreshold)  && approximatelyEquals(b, c, m_edgeLengthThreshold)) {
+                result = 'E';
+            }
+            // If any two sides are the same, then its an isosceles
+            else if (approximatelyEquals(a, b, m_edgeLengthThreshold) ||
+                    approximatelyEquals(b, c, m_edgeLengthThreshold) ||
+                    approximatelyEquals(a, c, m_edgeLengthThreshold))
+            {
+                result = 'I';
+            } "
+both statements are correct for determaning the type of triangle, but an equalateral triangle will be clasiffied as an
+isoscelies because it satisfies both statements and the isoscelies statement is the last statement it satisfies.
+instead of setting a result, the new code returns the result immediately.
+new code: 
+"if (approximatelyEquals(a, b, m_edgeLengthThreshold)  && approximatelyEquals(b, c, m_edgeLengthThreshold)) {
+                return 'E';
+            }
+            // If any two sides are the same, then its an isosceles
+            else if (approximatelyEquals(a, b, m_edgeLengthThreshold) ||
+                    approximatelyEquals(b, c, m_edgeLengthThreshold) ||
+                    approximatelyEquals(a, c, m_edgeLengthThreshold))
+            {
+                return 'I';
+            } "
+in Triangle::getTriangleType
+#10: in Trinagle.cpp, 
+		"m_points[0] = new Point(values[0]);
+        m_points[1] = new Point(values[1]);
+        m_points[2] = new Point(values[1]);"
+		changed to 
+		"m_points[0] = new Point(values[0]);
+        m_points[1] = new Point(values[1]);
+        m_points[2] = new Point(values[2]);"
+#11: in Point.cpp, changed "m_y = convertStringToDouble(values[2], &m_valid)" to "m_z = convertStringToDouble(values[2], &m_valid)" in Point::initialize
+#12: in Edge.cpp, changed "areSlopesEquivalent(getSlopeZ(), otherEdge.getSlopeX())" to "areSlopesEquivalent(getSlopeZ(), otherEdge.getSlopeZ())" in Edge::isParallelTo
